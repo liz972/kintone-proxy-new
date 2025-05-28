@@ -4,10 +4,18 @@ header("Content-Type: application/json");
 $raw = file_get_contents("php://input");
 $data = json_decode($raw, true);
 
+// 简单校验
+if (!isset($data['record']) || !is_array($data['record'])) {
+    http_response_code(400);
+    echo json_encode(["error" => "Invalid record format"]);
+    exit;
+}
+
 $kintone_app_id = "50";
 $kintone_token = "28LYckktUQmNE9XbPVYJOX34Bs0YZzG6dAZQFLMM";
 $kintone_url = "https://nbwfqj2m0ta3.cybozu.com/k/v1/record.json";
 
+// 只转发 record（假设 WordPress 那边字段名已为 fieldCode）
 $payload = [
     "app" => $kintone_app_id,
     "record" => $data["record"]
@@ -24,6 +32,14 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 $result = curl_exec($ch);
+
+if (curl_errno($ch)) {
+    http_response_code(500);
+    echo json_encode(["error" => curl_error($ch)]);
+    curl_close($ch);
+    exit;
+}
+
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
